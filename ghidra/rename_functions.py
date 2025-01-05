@@ -59,7 +59,7 @@ def get_callers(function):
 # ARM-specific refactored script to resolve function arguments
 def resolve_args(args):
     resolveds = []
-    print("args:"+str(args))
+    #print("args:"+str(args))
     for arg in args:
         if arg.isConstant():
             resolved = arg.getOffset()
@@ -75,7 +75,7 @@ def resolve_args(args):
         else:
             resolved = arg.getHigh().getName()
         resolveds.append(resolved)
-    print("Resolveds"+str(resolveds))
+    #print("Resolveds"+str(resolveds))
     return resolveds
 
 
@@ -132,12 +132,18 @@ def get_calls_from_caller(caller, callee):
 
 
 def get_real_name_candidates(callers_info, arg_num):
+    with open("/tmp/results.csv", "w") as fp:
+        fp.write("orig_funcname,log_command_name,log_content\n")
     callers_candidates = []
     for info in callers_info:
         names_candidates = set()
         caller_info = {'caller': info['caller']}
+        for cur_call in info["calls"]:
+            with open("/tmp/results.csv","a") as fp:
+                fp.write(str(info["caller"]["name"]) + "," + str(cur_call["args"][2]) + "," + str(cur_call["args"][3].replace(",",".") + "\n"))
         for call in info['calls']:  names_candidates.add(call['args'][arg_num])
         caller_info['candidates'] = list(names_candidates)
+        print("Realname Candidate:" + str(caller_info) + " " + str(call['args']))
         callers_candidates.append(caller_info)
     return callers_candidates
 
@@ -176,7 +182,8 @@ def rename_from_logging_function(function_name, arg_num):
     #with open("/tmp/result.json","w") as fp:
     #    json.dump(callers_candidates,fp)
     with open("/tmp/result.log","w") as f:
-        f.write(str(callers_candidates))
+        for cur_caller_candidate in callers_candidates:
+            f.write(str(cur_caller_candidate)+"\r\n")
     #rename_all(callers_candidates)
 
 
