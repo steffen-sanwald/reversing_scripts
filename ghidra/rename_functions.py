@@ -1,9 +1,9 @@
 #Rename functions based on logging function called
 #@author RD Team of Conviso
 #@category Conviso_Scripts
-#@keybinding 
-#@menupath 
-#@toolbar 
+#@keybinding
+#@menupath
+#@toolbar
 
 
 import ghidra.app.script.GhidraScript as GhidraScript
@@ -12,7 +12,7 @@ import ghidra.program.model.symbol.SymbolType as SymbolType
 from ghidra.app.decompiler import DecompileOptions
 from ghidra.app.decompiler import DecompInterface
 from ghidra.util.task import ConsoleTaskMonitor
-
+import json
 
 current_program = getCurrentProgram()   # Gets the current program
 monitor = ConsoleTaskMonitor()          # Handles monitor output to console
@@ -56,8 +56,10 @@ def get_callers(function):
 # Data.getValue         - Get the value of the data, it may be an address, a scalar, register or null if no value
 # Varnode.getHigh       - Get the high level variable this varnode represents
 # HighVariable.getName  - Get the name of the variable
+# ARM-specific refactored script to resolve function arguments
 def resolve_args(args):
     resolveds = []
+    print("args:"+str(args))
     for arg in args:
         if arg.isConstant():
             resolved = arg.getOffset()
@@ -73,6 +75,7 @@ def resolve_args(args):
         else:
             resolved = arg.getHigh().getName()
         resolveds.append(resolved)
+    print("Resolveds"+str(resolveds))
     return resolveds
 
 
@@ -103,14 +106,18 @@ def get_calls_from_caller(caller, callee):
         while opiter.hasNext():
             op = opiter.next()
             mnemonic = str(op.getMnemonic())
+            #print("do i reach this"+mnemonic)
             if mnemonic == "CALL":
                 inputs = op.getInputs()
                 address = inputs[0].getAddress()
                 # List of VarnodeAST types
                 args = inputs[1:]
+                #print("i should be printed")
+                #print(inputs)
                 if address == callee.getEntryPoint():
                     # get address of instruction this sequence belongs to
                     location = op.getSeqnum().getTarget()
+
                     call_info = {
                         'location': location,
                         'callee' : {
@@ -120,6 +127,7 @@ def get_calls_from_caller(caller, callee):
                         'args': resolve_args(args)
                     }
                     calls.append(call_info)
+    #print("calls:"+str(calls))
     return calls
 
 
@@ -164,11 +172,16 @@ def rename_from_logging_function(function_name, arg_num):
     callers = get_callers(callee)
     callers_info = get_calls_from_all_callers(callers, callee)
     callers_candidates = get_real_name_candidates(callers_info, arg_num)
-    rename_all(callers_candidates)
+    print(str(callers_candidates))
+    #with open("/tmp/result.json","w") as fp:
+    #    json.dump(callers_candidates,fp)
+    with open("/tmp/result.log","w") as f:
+        f.write(str(callers_candidates))
+    #rename_all(callers_candidates)
 
 
 def main():
-    rename_from_logging_function('log_log', 1)
+    rename_from_logging_function('log_stuff', 2)
 
 
 if __name__ == '__main__':
